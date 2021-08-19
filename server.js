@@ -1,35 +1,28 @@
+var mysql = require('mysql');
 var http = require('http');
-var express = require('express');
-var app = express();
-const puppeteer = require('puppeteer');
-// http.createServer(function (req, res) {
-//   res.writeHead(200, {'Content-Type': 'text/html'});
-//   res.end('Hello World!');
-// }).listen(8080);
+const dotenv = require('dotenv');
+dotenv.config();
+const { fork } = require('child_process');
+const child = fork(__dirname + '/crawling.js');
 
-app.get('/start', function(req, res){
-    (async () => {
-        try {
-          const browser = await puppeteer.launch({
-            headless: true
-          });
-          const page = await browser.newPage();
-          await page.setDefaultNavigationTimeout(0);           
-          await page.goto('https://www.target.com');
 
-          let body = await page.evaluate(() => {
-            return document.querySelector('body').innerHTML;
-          });
-          var hrefSegs = body.split(/href="(.*?)"/g);
-          for (var i = 1;i < hrefSegs.length;i+=2)
-          {
-              console.log(hrefSegs[i] + "\n");
-          }
-          await browser.close();
-        } catch (error) {
-          console.log(error);
-        }
-    })();
+//Connect MySQL
+console.log(process.env.DB_SERVER); 
+console.log(process.env.DB_USER); 
+console.log(process.env.DB_PW); 
+var con = mysql.createConnection({
+  host: process.env.DB_SERVER,
+  user: process.env.DB_USER,
+  password: process.env.DB_PW
 });
-  
-app.listen(3000);
+con.connect(function(err) {
+  if (err) throw err;
+  console.log("Connected!");
+});
+//
+// child.on('message', (message) => {
+//   console.log('Returning /total results');
+//   console.log(message);
+// });
+// child.send({cmd:'start',url:"http://aaa.com"});
+
