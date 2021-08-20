@@ -29,7 +29,7 @@ async function crawlPage(link,site_id) {
             if (hrefSegs[i].startsWith('#')) continue;
             let message = {url:hrefSegs[i],site_id:site_id}
             await sleep(1000);
-            console.log('Found:' + hrefSegs[i]);
+            console.log('Found Link:' + hrefSegs[i]);
             process.send(message);
         }
         await browser.close();

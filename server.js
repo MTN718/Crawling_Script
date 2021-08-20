@@ -48,10 +48,10 @@ const child = fork(__dirname + '/crawling.js');
               let siteData = siteDatas[0];
               if (link.startsWith(siteData.product_url_format) || link.startsWith("https://" + siteData.base_url + siteData.product_url_format))
               {
-                const links = await query('select * from product_url where link=' + link);
+                const links = await query("select * from product_url where link='" + link + "'");
                 if (links.length == 0)
                 {
-                  console.log('Add:' + link);
+                  console.log('Add Product URL:' + link);
                   await query("INSERT INTO product_url (site_id, link) VALUES ('" + site_id + "','" + link + "')");
                 }
                 //Add Product URL
@@ -60,7 +60,6 @@ const child = fork(__dirname + '/crawling.js');
               {
                 //Add Queue
                 //let escaped = mysql.escape(link);
-                console.log(link);
                 if (!link.startsWith("http"))
                     link = "https://" + siteData.base_url + link;
                 const links = await query("select * from queue where link='" + link + "'");
