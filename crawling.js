@@ -25,9 +25,11 @@ async function crawlPage(link,site_id) {
         var hrefSegs = body.split(/href="(.*?)"/g);
         for (var i = 1;i < hrefSegs.length;i+=2)
         {
-            console.log(hrefSegs[i] + "\n");
-            if (hrefSegs[i].startsWith('http')) continue;
+            //console.log(hrefSegs[i] + "\n");
+            if (hrefSegs[i].startsWith('#')) continue;
             let message = {url:hrefSegs[i],site_id:site_id}
+            await sleep(1000);
+            console.log('Found:' + hrefSegs[i]);
             process.send(message);
         }
         await browser.close();
@@ -35,3 +37,8 @@ async function crawlPage(link,site_id) {
         console.log(error);
     }
 }
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+} 
