@@ -4,12 +4,9 @@ const dotenv = require('dotenv');
 const util = require('util');
 dotenv.config();
 const { fork } = require('child_process');
-
-
+var osu = require('node-os-utils')
+var cpu = osu.cpu
 //Connect MySQL
-console.log(process.env.DB_SERVER); 
-console.log(process.env.DB_USER); 
-console.log(process.env.DB_PW); 
 var con = mysql.createConnection({
   host: process.env.DB_SERVER,
   user: process.env.DB_USER,
@@ -31,54 +28,61 @@ const child = fork(__dirname + '/crawling.js');
       }
       else
       {
-        
-        item = rows[0];
-        child.on('message', (message) => {
-          var link = message.url;
-          var site_id = message.site_id;
-          //const siteDatas = await query('select * from sites where id=' + site_id);
-          (async () => {
-            try {
-              const siteDatas = await  query('select * from sites where id=' + site_id);
-              if (siteDatas.length == 0) 
-              {
-                  console.log('Unregistered Site ID');
-                  return;
-              }
-              let siteData = siteDatas[0];
-              if (link.startsWith(siteData.product_url_format) || link.startsWith("https://" + siteData.base_url + siteData.product_url_format))
-              {
-                const links = await query("select * from product_url where link='" + link + "'");
-                if (links.length == 0)
+        let usage = await cpu.usage();
+        if (usage < 70)
+        {
+          item = rows[0];
+          child.on('message', (message) => {
+            var link = message.url;
+            var site_id = message.site_id;
+            //const siteDatas = await query('select * from sites where id=' + site_id);
+            (async () => {
+              try {
+                const siteDatas = await  query('select * from sites where id=' + site_id);
+                if (siteDatas.length == 0) 
                 {
-                  console.log('Add Product URL:' + link);
-                  await query("INSERT INTO product_url (site_id, link) VALUES ('" + site_id + "','" + link + "')");
+                    console.log('Unregistered Site ID');
+                    return;
                 }
-                //Add Product URL
+                let siteData = siteDatas[0];
+                if (link.startsWith(siteData.product_url_format) || link.startsWith("https://" + siteData.base_url + siteData.product_url_format))
+                {
+                  const links = await query("select * from product_url where link='" + link + "'");
+                  if (links.length == 0)
+                  {
+                    console.log('Add Product URL:' + link);
+                    await query("INSERT INTO product_url (site_id, link) VALUES ('" + site_id + "','" + link + "')");
+                  }
+                  //Add Product URL
+                }
+                else
+                {
+                  //Add Queue
+                  //let escaped = mysql.escape(link);
+                  if (!link.startsWith("http"))
+                      link = "https://" + siteData.base_url + link;
+                  const links = await query("select * from queue where link='" + link + "'");
+                  if (links.length == 0)
+                  {                  
+                    //console.log('Add:' + link);
+                    await query("INSERT INTO queue (site_id, link,is_processing) VALUES ('" + site_id + "','" + link + "','0')");
+                  }
+                }  
+              } finally {
+                
               }
-              else
-              {
-                //Add Queue
-                //let escaped = mysql.escape(link);
-                if (!link.startsWith("http"))
-                    link = "https://" + siteData.base_url + link;
-                const links = await query("select * from queue where link='" + link + "'");
-                if (links.length == 0)
-                {                  
-                  //console.log('Add:' + link);
-                  await query("INSERT INTO queue (site_id, link,is_processing) VALUES ('" + site_id + "','" + link + "','0')");
-                }
-              }  
-            } finally {
-              
-            }
-          })();      
-        });
-        console.log(item.link);     
-        child.send({cmd:'start',url:item.link,site_id:item.site_id});      
-        await query('update queue set is_processing=1 where id=' + item.id);
+            })();      
+          });
+          console.log(item.link);     
+          child.send({cmd:'start',url:item.link,site_id:item.site_id});      
+          await query('update queue set is_processing=1 where id=' + item.id);
+        }
+        else
+        {
+          await sleep(10000);
+        }
       }      
-      await sleep(300000);
+      
     }
   } finally {
     //con.end();
